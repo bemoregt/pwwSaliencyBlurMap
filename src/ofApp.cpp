@@ -13,7 +13,8 @@ Matrix getGaussian(int height, int width, double sigma);
 Image loadImage(const char *filename);
 void saveImage(Image &image, const char *filename);
 // pww
-Image applyFilter(Image &image);
+//Image applyFilter(Image &image);
+Image applyFilter(Image &image, Image &mask);
 Image applyFilter(Image &image, Matrix &filter, int times);
 
 //--------------------------------------------------------------
@@ -22,11 +23,14 @@ void ofApp::setup(){
     //Matrix filter = getGaussian(5, 5, 10.0);
     
     cout << "Loading image..." << endl;
-    Image image = loadImage("/Users/kerbal/Desktop/lena512.png");
+    Image image = loadImage("/Users/mun/Desktop/smile.png");
+    Image mask = loadImage("/Users/mun/Desktop/sal.png");
     cout << "Applying filter..." << endl;
-    Image newImage = applyFilter(image);
+    
+    Image newImage = applyFilter(image, mask);
     cout << "Saving image..." << endl;
-    saveImage(newImage, "/Users/kerbal/Desktop/result.png");
+    
+    saveImage(newImage, "/Users/mun/Desktop/result.png");
     cout << "Done!" << endl;
 }
 
@@ -94,7 +98,7 @@ void ofApp::gotMessage(ofMessage msg){
 void ofApp::dragEvent(ofDragInfo dragInfo){ 
 
 }
-//
+//-----------------------------------------------------------
 Matrix getGaussian(int height, int width, double sigma)
 {
     Matrix kernel(height, Array(width));
@@ -116,6 +120,7 @@ Matrix getGaussian(int height, int width, double sigma)
     
     return kernel;
 }
+
 // ------------------------------------------------------------
 Image loadImage(const char *filename)
 {
@@ -133,7 +138,8 @@ Image loadImage(const char *filename)
     
     return imageMatrix;
 }
-//
+
+//-------------------------------------------------------
 void saveImage(Image &image, const char *filename)
 {
     assert(image.size()==3);
@@ -153,8 +159,9 @@ void saveImage(Image &image, const char *filename)
     }
     imageFile.write(filename);
 }
+
 // pww -----------------------------------------------------
-Image applyFilter(Image &image)
+Image applyFilter(Image &image, Image &mask)
 {
     Matrix filter = getGaussian(9, 9, 10.0);
     Matrix filter2 = getGaussian(1, 1, 10.0);
@@ -173,28 +180,25 @@ Image applyFilter(Image &image)
     int d,i,j,h,w;
     
     Image newImage(3, Matrix(newImageHeight, Array(newImageWidth)));
-    
+    int kk=1;
     for (d=0 ; d<3 ; d++) {
-        for (i=0 ; i<newImageHeight ; i++) {
-            for (j=0 ; j<newImageWidth ; j++) {
-                if(i>100 && i<newImageHeight-100 && j>100 &&
-                   j< newImageWidth-100){
-                    for (h=i ; h<i+filterHeight2 ; h++) {
-                        for (w=j ; w<j+filterWidth2 ; w++) {
-                            newImage[d][i][j] += filter2[h-i][w-j]*image[d][h][w];
-                        }//for w
-                    }// for h
-                }//if
-                else{
-                    for (h=i ; h<i+filterHeight ; h++) {
-                        for (w=j ; w<j+filterWidth ; w++) {
-                            newImage[d][i][j] += filter[h-i][w-j]*image[d][h][w];
-                        }//for w
-                    }// for h
-                }
+        for (i=19 ; i<newImageHeight-19 ; i++) {
+            for (j=19 ; j<newImageWidth-19 ; j++) {
+                kk=(int)(mask[d][i][j]/255.0*19);
+                kk= 19-kk;
+                //ofLog() << ofToString(kk);
+                if(kk % 2 ==0) kk+=1;
+                
+                if(kk <=1) kk=1;
+                filter= getGaussian(kk, kk, 10.0);
+                for (h=i ; h<i+kk ; h++) {
+                    for (w=j ; w<j+kk ; w++) {
+                        newImage[d][i][j] += filter[h-i][w-j]*image[d][h][w];
+                    }//for w
+                }// for h
             }//for j
         }//for i
-    }
+    }//for d
     
     return newImage;
 }
@@ -203,7 +207,7 @@ Image applyFilter(Image &image, Matrix &filter, int times)
 {
     Image newImage = image;
     for(int i=0 ; i<times ; i++) {
-        newImage = applyFilter(newImage);
+        newImage = applyFilter(newImage, newImage);
     }
     return newImage;
 }
